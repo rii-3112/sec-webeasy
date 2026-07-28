@@ -1,0 +1,22 @@
+{
+  "name": "secpro-web",
+  "version": "1.0.0",
+  "description": "Security workshop Google Forms clone (Easy / Medium)",
+  "main": "src/server.js",
+  "scripts": {
+    "dev:easy": "MODE=easy PORT=3001 node --watch src/server.js",
+    "dev:medium": "MODE=medium PORT=3002 node --watch src/server.js",
+    "dev:all": "concurrently \"npm run dev:easy\" \"npm run dev:medium\"",
+    "start:easy": "MODE=easy PORT=3001 node src/server.js",
+    "start:medium": "MODE=medium PORT=3002 node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

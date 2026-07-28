@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>回答一覧 | SecPro Workshop</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Roboto', sans-serif; }
+  </style>
+</head>
+<body class="bg-[#f0ebf8] min-h-screen">
+  <header class="bg-white shadow-sm border-b">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-purple-700 font-medium">SecPro Forms — 管理者</span>
+        <span id="mode-badge" class="px-3 py-1 rounded-full text-white text-xs font-bold bg-gray-400">...</span>
+      </div>
+      <nav class="flex gap-4 text-sm text-purple-700">
+        <a href="/">回答</a>
+        <a href="/create.html">作成</a>
+        <a href="/admin.html" class="font-medium underline">管理</a>
+        <a href="/challenges.html" class="font-bold">演習シート</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto mt-6 mb-12 px-4">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <h1 class="text-2xl text-gray-800 mb-2">回答一覧</h1>
+      <p class="text-sm text-gray-500 mb-4">フォーム ID を指定して回答を表示します（管理者用）</p>
+
+      <div class="flex gap-2 mb-6">
+        <input type="text" id="form-id-input" placeholder="form_id（例: 2 または event-survey）"
+          class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm">
+        <button id="load-btn" class="bg-purple-600 text-white px-4 py-2 rounded text-sm hover:bg-purple-700">
+          読み込む
+        </button>
+      </div>
+
+      <div id="form-info" class="text-sm text-gray-600 mb-4"></div>
+      <div id="responses-container"></div>
+    </div>
+  </main>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>
