@@ -2,6 +2,8 @@ function stampsKey(mode) {
   return `secpro_stamps_${mode}`;
 }
 
+let pendingHintDetails = null;
+
 function getCollectedMap(mode) {
   try {
     const parsed = JSON.parse(localStorage.getItem(stampsKey(mode)) || '{}');
@@ -72,6 +74,29 @@ function renderCollectedList(mode) {
     : stamps.map((s) => `<li class="flex items-center gap-2"><span class="text-green-600">✓</span> ${escapeHtml(s)}</li>`).join('');
 }
 
+function renderStepsSection(c) {
+  if (!c.steps?.length) return '';
+
+  const linksHtml = c.links?.length
+    ? `
+      <p class="text-xs text-gray-500 mt-3 mb-1">使う画面</p>
+      <div class="flex flex-wrap gap-3">
+        ${c.links.map((l) => `<a href="${escapeHtml(l.href)}" class="text-sm text-purple-700 underline font-medium">${escapeHtml(l.label)}</a>`).join('')}
+      </div>
+    `
+    : '';
+
+  return `
+    <div class="mt-4 p-4 bg-purple-50 border border-purple-100 rounded-lg">
+      <p class="text-sm font-medium text-purple-800 mb-2">やること</p>
+      <ol class="list-decimal list-inside space-y-1 text-sm text-gray-700">
+        ${c.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join('')}
+      </ol>
+      ${linksHtml}
+    </div>
+  `;
+}
+
 function renderStampSection(c) {
   if (c.collectedStamp) {
     return `
@@ -84,7 +109,7 @@ function renderStampSection(c) {
 
   return `
     <div class="mt-4 pt-4 border-t border-gray-100">
-      <label class="block text-sm text-gray-600 mb-2" for="stamp-input-${c.id}">取得したスタンプを入力</label>
+      <label class="block text-sm text-gray-600 mb-2" for="stamp-input-${c.id}">③ 取得したスタンプを入力</label>
       <div class="flex gap-2">
         <input
           type="text"
@@ -124,15 +149,20 @@ function renderChallenges(challenges, collectedMap) {
           </div>
         </div>
 
-        <div class="mt-4 space-y-2">
-          ${c.hints.map((hint, i) => `
-            <details class="group border border-gray-100 rounded-lg">
-              <summary class="px-4 py-2 cursor-pointer text-sm text-purple-700 hover:bg-purple-50 rounded-lg">
-                ヒント ${i + 1} を見る
-              </summary>
-              <p class="px-4 pb-3 text-sm text-gray-600">${escapeHtml(hint)}</p>
-            </details>
-          `).join('')}
+        ${renderStepsSection(c)}
+
+        <div class="mt-4">
+          <p class="text-xs text-gray-400 mb-2">ヒント</p>
+          <div class="space-y-2">
+            ${c.hints.map((hint, i) => `
+              <details class="hint-details group border border-gray-100 rounded-lg">
+                <summary class="px-4 py-2 cursor-pointer text-sm text-gray-500 hover:bg-gray-50 rounded-lg">
+                  ヒント ${i + 1} を見る
+                </summary>
+                <p class="px-4 pb-3 text-sm text-gray-600">${escapeHtml(hint)}</p>
+              </details>
+            `).join('')}
+          </div>
         </div>
 
         ${renderStampSection({ ...c, collectedStamp })}
@@ -140,6 +170,48 @@ function renderChallenges(challenges, collectedMap) {
     </div>
   `;
   }).join('');
+}
+
+function openHintModal(details) {
+  pendingHintDetails = details;
+  document.getElementById('hint-modal').classList.remove('hidden');
+}
+
+function closeHintModal() {
+  pendingHintDetails = null;
+  document.getElementById('hint-modal').classList.add('hidden');
+}
+
+function bindHintHandlers() {
+  document.querySelectorAll('.hint-details').forEach((details) => {
+    const summary = details.querySelector('summary');
+    if (!summary || summary.dataset.hintBound === 'true') return;
+
+    summary.dataset.hintBound = 'true';
+    summary.addEventListener('click', (e) => {
+      if (details.open) return;
+      e.preventDefault();
+      openHintModal(details);
+    });
+  });
+}
+
+function bindHintModalHandlers() {
+  document.getElementById('hint-modal-cancel').addEventListener('click', closeHintModal);
+  document.getElementById('hint-modal-backdrop').addEventListener('click', closeHintModal);
+
+  document.getElementById('hint-modal-confirm').addEventListener('click', () => {
+    if (pendingHintDetails) {
+      pendingHintDetails.open = true;
+    }
+    closeHintModal();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && pendingHintDetails) {
+      closeHintModal();
+    }
+  });
 }
 
 async function verifyStamp(stamp) {
@@ -180,7 +252,12 @@ async function submitStamp(mode, challengeId, stamp) {
 
   const challengesRes = await fetch('/api/challenges');
   const data = await challengesRes.json();
-  renderChallenges(data.challenges, getCollectedMap(mode));
+  refreshChallengesUI(mode, data.challenges);
+}
+
+function refreshChallengesUI(mode, challenges) {
+  renderChallenges(challenges, getCollectedMap(mode));
+  bindHintHandlers();
   renderCollectedList(mode);
   updateProgress(mode);
 }
@@ -228,11 +305,9 @@ async function init() {
 
   const challengesRes = await fetch('/api/challenges');
   const data = await challengesRes.json();
-  const collectedMap = getCollectedMap(mode);
 
-  renderChallenges(data.challenges, collectedMap);
-  renderCollectedList(mode);
-  updateProgress(mode);
+  bindHintModalHandlers();
+  refreshChallengesUI(mode, data.challenges);
   bindStampHandlers(mode);
 }
 
