@@ -2,25 +2,33 @@ function stampsKey(mode) {
   return `secpro_stamps_${mode}`;
 }
 
-function getCollectedStamps(mode) {
+function getCollectedMap(mode) {
   try {
-    return JSON.parse(localStorage.getItem(stampsKey(mode)) || '[]');
+    const parsed = JSON.parse(localStorage.getItem(stampsKey(mode)) || '{}');
+    if (Array.isArray(parsed)) {
+      return {};
+    }
+    return parsed;
   } catch {
-    return [];
+    return {};
   }
 }
 
-function saveStamp(mode, stamp) {
-  const list = getCollectedStamps(mode);
-  if (!list.includes(stamp)) {
-    list.push(stamp);
-    localStorage.setItem(stampsKey(mode), JSON.stringify(list));
-  }
-  return list;
+function getCollectedCount(mode) {
+  return Object.keys(getCollectedMap(mode)).length;
 }
 
-function showFeedback(message, type) {
-  const el = document.getElementById('verify-feedback');
+function saveStamp(mode, challengeId, stamp) {
+  const map = getCollectedMap(mode);
+  map[challengeId] = stamp;
+  localStorage.setItem(stampsKey(mode), JSON.stringify(map));
+  return map;
+}
+
+function showCardFeedback(challengeId, message, type) {
+  const el = document.querySelector(`.stamp-feedback[data-challenge-id="${challengeId}"]`);
+  if (!el) return;
+
   el.classList.remove('hidden', 'text-green-600', 'text-red-500', 'text-yellow-600');
 
   if (type === 'success') {
@@ -35,11 +43,13 @@ function showFeedback(message, type) {
 }
 
 function updateProgress(mode) {
-  const count = getCollectedStamps(mode).length;
+  const count = getCollectedCount(mode);
   document.getElementById('progress-text').textContent = `${count}/3 達成`;
 
   if (count >= 3) {
     document.getElementById('all-clear').classList.remove('hidden');
+  } else {
+    document.getElementById('all-clear').classList.add('hidden');
   }
 }
 
@@ -54,19 +64,57 @@ function escapeHtml(text) {
 
 function renderCollectedList(mode) {
   const ul = document.getElementById('collected-stamps');
-  const collected = getCollectedStamps(mode);
+  const collected = getCollectedMap(mode);
+  const stamps = Object.values(collected);
 
-  ul.innerHTML = collected.length === 0
+  ul.innerHTML = stamps.length === 0
     ? '<li class="text-gray-400">まだ取得していません</li>'
-    : collected.map((s) => `<li class="flex items-center gap-2"><span class="text-green-600">✓</span> ${s}</li>`).join('');
+    : stamps.map((s) => `<li class="flex items-center gap-2"><span class="text-green-600">✓</span> ${escapeHtml(s)}</li>`).join('');
 }
 
-function renderChallenges(challenges) {
+function renderStampSection(c) {
+  if (c.collectedStamp) {
+    return `
+      <p class="mt-4 pt-4 border-t border-gray-100 text-sm font-bold text-green-600 flex items-center gap-2">
+        <span aria-hidden="true">✓</span>
+        取得済み: ${escapeHtml(c.collectedStamp)}
+      </p>
+    `;
+  }
+
+  return `
+    <div class="mt-4 pt-4 border-t border-gray-100">
+      <label class="block text-sm text-gray-600 mb-2" for="stamp-input-${c.id}">取得したスタンプを入力</label>
+      <div class="flex gap-2">
+        <input
+          type="text"
+          id="stamp-input-${c.id}"
+          data-challenge-id="${c.id}"
+          placeholder="〇〇-OK!! 形式で入力"
+          class="stamp-input flex-1 border border-gray-300 rounded px-3 py-2 text-sm"
+        >
+        <button
+          type="button"
+          data-challenge-id="${c.id}"
+          class="stamp-verify-btn bg-purple-600 text-white px-4 py-2 rounded text-sm hover:bg-purple-700"
+        >
+          確認
+        </button>
+      </div>
+      <p class="stamp-feedback hidden mt-2 text-sm font-bold" data-challenge-id="${c.id}"></p>
+    </div>
+  `;
+}
+
+function renderChallenges(challenges, collectedMap) {
   const container = document.getElementById('challenges-list');
 
-  container.innerHTML = challenges.map((c, index) => `
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div class="h-1 bg-purple-500"></div>
+  container.innerHTML = challenges.map((c, index) => {
+    const collectedStamp = collectedMap[c.id];
+
+    return `
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" data-challenge-card="${c.id}">
+      <div class="h-1 ${collectedStamp ? 'bg-green-500' : 'bg-purple-500'}"></div>
       <div class="p-6">
         <div class="flex items-start justify-between gap-4">
           <div>
@@ -86,12 +134,15 @@ function renderChallenges(challenges) {
             </details>
           `).join('')}
         </div>
+
+        ${renderStampSection({ ...c, collectedStamp })}
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
-async function verifyStamp(mode, stamp) {
+async function verifyStamp(stamp) {
   const res = await fetch('/api/stamps/verify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -105,6 +156,71 @@ async function verifyStamp(mode, stamp) {
   return res.json();
 }
 
+async function submitStamp(mode, challengeId, stamp) {
+  const result = await verifyStamp(stamp);
+
+  if (!result.correct) {
+    showCardFeedback(challengeId, 'スタンプ名が違うみたい…', 'error');
+    return;
+  }
+
+  if (result.challengeId !== challengeId) {
+    showCardFeedback(challengeId, 'このチャレンジのスタンプではないみたい…', 'error');
+    return;
+  }
+
+  const collected = getCollectedMap(mode);
+  if (collected[challengeId]) {
+    showCardFeedback(challengeId, 'このチャレンジは取得済みです', 'warn');
+    return;
+  }
+
+  saveStamp(mode, challengeId, stamp);
+  showCardFeedback(challengeId, '正解！！', 'success');
+
+  const challengesRes = await fetch('/api/challenges');
+  const data = await challengesRes.json();
+  renderChallenges(data.challenges, getCollectedMap(mode));
+  renderCollectedList(mode);
+  updateProgress(mode);
+}
+
+function bindStampHandlers(mode) {
+  const container = document.getElementById('challenges-list');
+
+  container.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.stamp-verify-btn');
+    if (!btn) return;
+
+    const challengeId = btn.dataset.challengeId;
+    const input = container.querySelector(`.stamp-input[data-challenge-id="${challengeId}"]`);
+    const stamp = input?.value.trim();
+    if (!stamp) return;
+
+    btn.disabled = true;
+
+    try {
+      await submitStamp(mode, challengeId, stamp);
+    } catch {
+      showCardFeedback(challengeId, '通信エラーが発生しました', 'error');
+    }
+
+    btn.disabled = false;
+  });
+
+  container.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+
+    const input = e.target.closest('.stamp-input');
+    if (!input) return;
+
+    e.preventDefault();
+    const challengeId = input.dataset.challengeId;
+    const btn = container.querySelector(`.stamp-verify-btn[data-challenge-id="${challengeId}"]`);
+    btn?.click();
+  });
+}
+
 async function init() {
   const configRes = await fetch('/api/config');
   const config = await configRes.json();
@@ -112,51 +228,12 @@ async function init() {
 
   const challengesRes = await fetch('/api/challenges');
   const data = await challengesRes.json();
+  const collectedMap = getCollectedMap(mode);
 
-  renderChallenges(data.challenges);
+  renderChallenges(data.challenges, collectedMap);
   renderCollectedList(mode);
   updateProgress(mode);
-
-  document.getElementById('register-stamp-btn').addEventListener('click', async () => {
-    const input = document.getElementById('stamp-input');
-    const stamp = input.value.trim();
-    if (!stamp) return;
-
-    const btn = document.getElementById('register-stamp-btn');
-    btn.disabled = true;
-
-    try {
-      const result = await verifyStamp(mode, stamp);
-
-      if (!result.correct) {
-        showFeedback('スタンプ名が違うみたい…', 'error');
-        btn.disabled = false;
-        return;
-      }
-
-      const already = getCollectedStamps(mode).includes(stamp);
-      if (already) {
-        showFeedback('このスタンプは取得済みです', 'warn');
-      } else {
-        saveStamp(mode, stamp);
-        showFeedback('正解！！', 'success');
-        input.value = '';
-        renderCollectedList(mode);
-        updateProgress(mode);
-      }
-    } catch {
-      showFeedback('通信エラーが発生しました', 'error');
-    }
-
-    btn.disabled = false;
-  });
-
-  document.getElementById('stamp-input').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      document.getElementById('register-stamp-btn').click();
-    }
-  });
+  bindStampHandlers(mode);
 }
 
 init();
