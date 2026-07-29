@@ -1,15 +1,10 @@
 const express = require('express');
 const { randomUUID } = require('crypto');
-const { MODE, STAMPS } = require('../config');
-const { getClientIp } = require('../middleware/clientIp');
+const { MODE } = require('../config');
 const {
   findForm,
   listResponses,
   addResponse,
-  incrementSubmissionCount,
-  hasIpSubmitted,
-  recordIpSubmission,
-  countResponsesForForm,
 } = require('../db/store');
 
 const router = express.Router();
@@ -71,35 +66,8 @@ router.post('/', (req, res) => {
         }
       }
     }
-
-    const ip = getClientIp(req);
-    if (hasIpSubmitted(resolvedFormId, ip)) {
-      return res.status(429).json({ error: 'Already submitted from this IP' });
-    }
-
-    const existingCount = countResponsesForForm(resolvedFormId);
-    const hasXff = typeof req.headers['x-forwarded-for'] === 'string'
-      && req.headers['x-forwarded-for'].trim();
-
-    recordIpSubmission(resolvedFormId, ip);
-    addResponse({
-      id: randomUUID(),
-      formId: resolvedFormId,
-      answers: processedAnswers,
-      submittedAt: new Date().toISOString(),
-      ip,
-    });
-
-    const stamp = hasXff && existingCount >= 1 ? STAMPS.medium.bypass : undefined;
-
-    return res.json({
-      ok: true,
-      message: '投稿を受け付けました',
-      ...(stamp ? { stamp } : {}),
-    });
   }
 
-  const count = incrementSubmissionCount(resolvedFormId);
   addResponse({
     id: randomUUID(),
     formId: resolvedFormId,
@@ -107,12 +75,9 @@ router.post('/', (req, res) => {
     submittedAt: new Date().toISOString(),
   });
 
-  const stamp = count >= 2 ? STAMPS.easy.bypass : undefined;
-
   res.json({
     ok: true,
     message: '投稿を受け付けました',
-    ...(stamp ? { stamp } : {}),
   });
 });
 

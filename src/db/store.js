@@ -8,8 +8,6 @@ function createStore() {
   return {
     forms: [...seed.forms],
     responses: [...seed.responses],
-    formSubmissionCounts: {},
-    ipSubmissions: new Map(),
     secretFormId: seed.secretFormId,
     publicFormId: seed.publicFormId,
   };
@@ -54,23 +52,6 @@ function addResponse(response) {
   return response;
 }
 
-function incrementSubmissionCount(formId) {
-  store.formSubmissionCounts[formId] = (store.formSubmissionCounts[formId] || 0) + 1;
-  return store.formSubmissionCounts[formId];
-}
-
-function hasIpSubmitted(formId, ip) {
-  return store.ipSubmissions.has(`${formId}:${ip}`);
-}
-
-function recordIpSubmission(formId, ip) {
-  store.ipSubmissions.set(`${formId}:${ip}`, true);
-}
-
-function countResponsesForForm(formId) {
-  return store.responses.filter((r) => r.formId === formId).length;
-}
-
 module.exports = {
   store,
   findForm,
@@ -78,8 +59,4 @@ module.exports = {
   createForm,
   listResponses,
   addResponse,
-  incrementSubmissionCount,
-  hasIpSubmitted,
-  recordIpSubmission,
-  countResponsesForForm,
 };

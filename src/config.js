@@ -6,12 +6,12 @@ const STAMPS = {
   easy: {
     idor: '秘密データ-OK!!',
     xss: 'スクリプト実行-OK!!',
-    bypass: '連投成功-OK!!',
+    create: '無認可作成-OK!!',
   },
   medium: {
     idor: '内部ID発見-OK!!',
     xss: 'サニタイズ突破-OK!!',
-    bypass: 'IP偽装-OK!!',
+    create: 'API直作成-OK!!',
   },
 };
 

@@ -5,15 +5,11 @@ function getFormParam() {
   return params.get('form');
 }
 
-function storageKey(formId) {
-  return `secpro_submitted_${formId}`;
-}
-
 function renderQuestions(form) {
   const container = document.getElementById('survey-form');
   container.innerHTML = '';
 
-  form.questions.forEach((q, index) => {
+  form.questions.forEach((q) => {
     const wrap = document.createElement('div');
     wrap.className = 'bg-white rounded-lg shadow-sm border border-gray-200 p-6';
 
@@ -43,15 +39,6 @@ function renderQuestions(form) {
   });
 }
 
-function checkAlreadySubmitted(formId) {
-  if (localStorage.getItem(storageKey(formId)) === '1') {
-    document.getElementById('already-submitted').classList.remove('hidden');
-    document.getElementById('submit-btn').disabled = true;
-    return true;
-  }
-  return false;
-}
-
 async function loadForm() {
   const formParam = getFormParam();
   let url = '/api/forms';
@@ -75,7 +62,6 @@ async function loadForm() {
 
     document.getElementById('form-title').textContent = currentForm.title;
     renderQuestions(currentForm);
-    checkAlreadySubmitted(currentForm.id);
   } catch (err) {
     document.getElementById('form-title').textContent = 'フォームが見つかりません';
     document.getElementById('status-msg').textContent = 'URL の form パラメータを確認してください。';
@@ -107,11 +93,6 @@ document.getElementById('survey-form').addEventListener('submit', async (e) => {
     return;
   }
 
-  if (localStorage.getItem(storageKey(currentForm.id)) === '1') {
-    document.getElementById('status-msg').textContent = 'すでに回答済みです。';
-    return;
-  }
-
   const submitBtn = document.getElementById('submit-btn');
   submitBtn.disabled = true;
 
@@ -130,13 +111,8 @@ document.getElementById('survey-form').addEventListener('submit', async (e) => {
       return;
     }
 
-    localStorage.setItem(storageKey(currentForm.id), '1');
     document.getElementById('status-msg').textContent = data.message || '送信しました。ありがとうございました！';
-    document.getElementById('already-submitted').classList.remove('hidden');
-
-    if (data.stamp) {
-      document.getElementById('status-msg').textContent += ` スタンプ: ${data.stamp}`;
-    }
+    submitBtn.disabled = false;
   } catch {
     document.getElementById('status-msg').textContent = '通信エラーが発生しました';
     submitBtn.disabled = false;

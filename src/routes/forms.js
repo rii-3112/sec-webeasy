@@ -1,5 +1,5 @@
 const express = require('express');
-const { MODE } = require('../config');
+const { MODE, STAMPS } = require('../config');
 const { listForms, findForm, createForm } = require('../db/store');
 
 const router = express.Router();
@@ -60,6 +60,7 @@ router.post('/', (req, res) => {
     publicId: form.publicId,
     title: form.title,
     questions: form.questions,
+    stamp: STAMPS[MODE].create,
   });
 });
 
