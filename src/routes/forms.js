@@ -34,7 +34,7 @@ router.get('/', (req, res) => {
 });
 
 router.get('/:id', (req, res) => {
-  const form = findForm(req.params.id, req.sessionId);
+  const form = findForm(req.params.id);
   if (!form) {
     return res.status(404).json({ error: 'Form not found' });
   }

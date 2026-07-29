@@ -11,6 +11,16 @@ async function resolveFormId(input) {
   return input;
 }
 
+function renderUnsafeHtml(element, html) {
+  element.innerHTML = html;
+  // 意図的な脆弱性: innerHTML 後に script を再挿入して実行させる（旧来の管理画面の挙動）
+  element.querySelectorAll('script').forEach((oldScript) => {
+    const script = document.createElement('script');
+    script.textContent = oldScript.textContent;
+    oldScript.replaceWith(script);
+  });
+}
+
 function renderResponses(responses) {
   const container = document.getElementById('responses-container');
 
@@ -42,7 +52,7 @@ function renderResponses(responses) {
 
       const val = document.createElement('div');
       val.className = 'answer-cell text-gray-800 mt-1';
-      val.innerHTML = value;
+      renderUnsafeHtml(val, value);
 
       row.appendChild(label);
       row.appendChild(val);
@@ -80,14 +90,15 @@ async function loadResponses() {
     }
 
     const res = await fetch(`/api/responses?form_id=${encodeURIComponent(formId)}`);
-    const responses = await res.json();
+    const apiResponses = await res.json();
 
     if (!res.ok) {
-      document.getElementById('form-info').textContent = responses.error || '取得に失敗しました';
+      document.getElementById('form-info').textContent = apiResponses.error || '取得に失敗しました';
       return;
     }
 
-    renderResponses(responses);
+    const localResponses = getLocalResponsesForForm(formId);
+    renderResponses([...apiResponses, ...localResponses]);
   } catch {
     document.getElementById('form-info').textContent = '通信エラーが発生しました';
   }

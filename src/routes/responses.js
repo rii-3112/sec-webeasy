@@ -49,7 +49,7 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'formId is required' });
   }
 
-  const form = findForm(formId, req.sessionId);
+  const form = findForm(formId);
   if (!form) {
     return res.status(404).json({ error: 'Form not found' });
   }

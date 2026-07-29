@@ -13,7 +13,7 @@ app.use(express.json());
 app.use(sessionMiddleware);
 
 app.get('/admin.html', (req, res) => {
-  res.setHeader(
+  res.append(
     'Set-Cookie',
     'admin_session=workshop_admin_secret; Path=/; SameSite=Lax'
   );

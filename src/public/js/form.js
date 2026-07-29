@@ -1,8 +1,22 @@
 let currentForm = null;
+let currentMode = 'easy';
 
 function getFormParam() {
   const params = new URLSearchParams(window.location.search);
   return params.get('form');
+}
+
+function sanitizeMedium(input) {
+  return String(input)
+    .replace(/<script>/gi, '')
+    .replace(/<\/script>/gi, '');
+}
+
+function processAnswers(answers) {
+  if (currentMode !== 'medium') return answers;
+  return Object.fromEntries(
+    Object.entries(answers).map(([k, v]) => [k, sanitizeMedium(v)])
+  );
 }
 
 function renderQuestions(form) {
@@ -41,20 +55,17 @@ function renderQuestions(form) {
 
 async function loadForm() {
   const formParam = getFormParam();
-  let url = '/api/forms';
-
-  if (formParam) {
-    url = `/api/forms/${encodeURIComponent(formParam)}`;
-  }
 
   try {
+    const configRes = await fetch('/api/config');
+    const config = await configRes.json();
+    currentMode = config.mode;
+
     if (formParam) {
-      const res = await fetch(url);
+      const res = await fetch(`/api/forms/${encodeURIComponent(formParam)}`);
       if (!res.ok) throw new Error('not found');
       currentForm = await res.json();
     } else {
-      const res = await fetch('/api/config');
-      const config = await res.json();
       const defaultId = config.mode === 'medium' ? 'event-survey' : '2';
       const formRes = await fetch(`/api/forms/${defaultId}`);
       currentForm = await formRes.json();
@@ -62,7 +73,7 @@ async function loadForm() {
 
     document.getElementById('form-title').textContent = currentForm.title;
     renderQuestions(currentForm);
-  } catch (err) {
+  } catch {
     document.getElementById('form-title').textContent = 'フォームが見つかりません';
     document.getElementById('status-msg').textContent = 'URL の form パラメータを確認してください。';
   }
@@ -96,27 +107,15 @@ document.getElementById('survey-form').addEventListener('submit', async (e) => {
   const submitBtn = document.getElementById('submit-btn');
   submitBtn.disabled = true;
 
-  try {
-    const res = await fetch('/api/responses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ formId: currentForm.id, answers }),
-    });
+  saveLocalResponse({
+    id: crypto.randomUUID(),
+    formId: currentForm.id,
+    answers: processAnswers(answers),
+    submittedAt: new Date().toISOString(),
+  });
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      document.getElementById('status-msg').textContent = data.error || '送信に失敗しました';
-      submitBtn.disabled = false;
-      return;
-    }
-
-    document.getElementById('status-msg').textContent = data.message || '送信しました。ありがとうございました！';
-    submitBtn.disabled = false;
-  } catch {
-    document.getElementById('status-msg').textContent = '通信エラーが発生しました';
-    submitBtn.disabled = false;
-  }
+  document.getElementById('status-msg').textContent = '投稿を受け付けました';
+  submitBtn.disabled = false;
 });
 
 loadForm();

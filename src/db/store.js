@@ -24,15 +24,10 @@ function isSeedForm(form) {
   return form.id === store.secretFormId || form.id === store.publicFormId;
 }
 
-function findForm(idOrPublicId, sessionId = null) {
-  const form = store.forms.find(
+function findForm(idOrPublicId) {
+  return store.forms.find(
     (f) => f.id === idOrPublicId || f.publicId === idOrPublicId
-  );
-  if (!form) return null;
-  if (!isSeedForm(form) && form.sessionId !== sessionId) {
-    return null;
-  }
-  return form;
+  ) || null;
 }
 
 function listForms(sessionId = null) {
