@@ -1,15 +1,11 @@
 const express = require('express');
 const { MODE, STAMPS } = require('../config');
-const { listForms, findForm, createForm, store } = require('../db/store');
+const { listForms, findForm, createForm, isSeedForm } = require('../db/store');
 
 const router = express.Router();
 
-function isSeedForm(form) {
-  return form.id === store.secretFormId || form.id === store.publicFormId;
-}
-
 router.get('/', (req, res) => {
-  const forms = listForms().map((f) => {
+  const forms = listForms(req.sessionId).map((f) => {
     const base = {
       publicId: f.publicId,
       title: f.title,
@@ -38,7 +34,7 @@ router.get('/', (req, res) => {
 });
 
 router.get('/:id', (req, res) => {
-  const form = findForm(req.params.id);
+  const form = findForm(req.params.id, req.sessionId);
   if (!form) {
     return res.status(404).json({ error: 'Form not found' });
   }
@@ -59,7 +55,7 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'title and questions are required' });
   }
 
-  const form = createForm({ title, questions });
+  const form = createForm({ title, questions, sessionId: req.sessionId });
   res.status(201).json({
     id: form.id,
     publicId: form.publicId,

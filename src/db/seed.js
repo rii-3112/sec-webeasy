@@ -36,6 +36,7 @@ function createSeedData() {
     {
       id: 'r-secret-1',
       formId: secretFormId,
+      isSeed: true,
       answers: {
         q1: '来期M&A計画は3月発表予定（極秘）',
       },

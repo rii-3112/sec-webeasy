@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const { MODE, PORT } = require('./config');
+const { sessionMiddleware } = require('./middleware/session');
 const formsRouter = require('./routes/forms');
 const responsesRouter = require('./routes/responses');
 const challengesRouter = require('./routes/challenges');
@@ -9,6 +10,7 @@ const stampsRouter = require('./routes/stamps');
 const app = express();
 
 app.use(express.json());
+app.use(sessionMiddleware);
 
 app.get('/admin.html', (req, res) => {
   res.setHeader(

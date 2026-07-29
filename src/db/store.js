@@ -20,17 +20,28 @@ if (!global[GLOBAL_KEY]) {
 
 const store = global[GLOBAL_KEY];
 
-function findForm(idOrPublicId) {
-  return store.forms.find(
+function isSeedForm(form) {
+  return form.id === store.secretFormId || form.id === store.publicFormId;
+}
+
+function findForm(idOrPublicId, sessionId = null) {
+  const form = store.forms.find(
     (f) => f.id === idOrPublicId || f.publicId === idOrPublicId
+  );
+  if (!form) return null;
+  if (!isSeedForm(form) && form.sessionId !== sessionId) {
+    return null;
+  }
+  return form;
+}
+
+function listForms(sessionId = null) {
+  return store.forms.filter(
+    (f) => isSeedForm(f) || f.sessionId === sessionId
   );
 }
 
-function listForms() {
-  return store.forms;
-}
-
-function createForm({ title, questions }) {
+function createForm({ title, questions, sessionId }) {
   const id = newFormId();
   const form = {
     id,
@@ -38,13 +49,18 @@ function createForm({ title, questions }) {
     title,
     isSecret: false,
     questions: questions || [],
+    sessionId,
   };
   store.forms.push(form);
   return form;
 }
 
-function listResponses(formId) {
-  return store.responses.filter((r) => r.formId === formId);
+function listResponses(formId, sessionId = null) {
+  return store.responses.filter((r) => {
+    if (r.formId !== formId) return false;
+    if (r.isSeed) return true;
+    return r.sessionId === sessionId;
+  });
 }
 
 function addResponse(response) {
@@ -54,6 +70,7 @@ function addResponse(response) {
 
 module.exports = {
   store,
+  isSeedForm,
   findForm,
   listForms,
   createForm,

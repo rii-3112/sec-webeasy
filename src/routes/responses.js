@@ -31,7 +31,7 @@ router.get('/', (req, res) => {
     return res.status(400).json({ error: 'form_id is required' });
   }
 
-  const responses = listResponses(formId).map((r) => ({
+  const responses = listResponses(formId, req.sessionId).map((r) => ({
     id: r.id,
     formId: r.formId,
     answers: r.answers,
@@ -49,7 +49,7 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'formId is required' });
   }
 
-  const form = findForm(formId);
+  const form = findForm(formId, req.sessionId);
   if (!form) {
     return res.status(404).json({ error: 'Form not found' });
   }
@@ -71,6 +71,7 @@ router.post('/', (req, res) => {
   addResponse({
     id: randomUUID(),
     formId: resolvedFormId,
+    sessionId: req.sessionId,
     answers: processedAnswers,
     submittedAt: new Date().toISOString(),
   });
