@@ -43,6 +43,15 @@ function updateProgress(mode) {
   }
 }
 
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function renderCollectedList(mode) {
   const ul = document.getElementById('collected-stamps');
   const collected = getCollectedStamps(mode);
@@ -62,8 +71,8 @@ function renderChallenges(challenges) {
         <div class="flex items-start justify-between gap-4">
           <div>
             <p class="text-xs text-purple-600 font-bold mb-1">CHALLENGE ${index + 1}</p>
-            <h2 class="text-lg font-medium text-gray-800">${c.title}</h2>
-            <p class="text-sm text-gray-600 mt-2">${c.mission}</p>
+            <h2 class="text-lg font-medium text-gray-800">${escapeHtml(c.title)}</h2>
+            <p class="text-sm text-gray-600 mt-2">${escapeHtml(c.mission)}</p>
           </div>
         </div>
 
@@ -73,7 +82,7 @@ function renderChallenges(challenges) {
               <summary class="px-4 py-2 cursor-pointer text-sm text-purple-700 hover:bg-purple-50 rounded-lg">
                 ヒント ${i + 1} を見る
               </summary>
-              <p class="px-4 pb-3 text-sm text-gray-600">${hint}</p>
+              <p class="px-4 pb-3 text-sm text-gray-600">${escapeHtml(hint)}</p>
             </details>
           `).join('')}
         </div>
