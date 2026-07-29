@@ -65,8 +65,8 @@ vercel --name secpro-medium
 
 | 環境 | URL 例 |
 |------|--------|
-| Easy | `https://secpro-easy.vercel.app` |
-| Medium | `https://secpro-medium.vercel.app` |
+| Easy | `https://sec-webeasy.vercel.app/` |
+| Medium | `https://sec-webmedium.vercel.app/` |
 
 ### 注意（Serverless）
 
