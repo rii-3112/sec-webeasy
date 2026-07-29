@@ -1,8 +1,12 @@
 const express = require('express');
 const { MODE, STAMPS } = require('../config');
-const { listForms, findForm, createForm } = require('../db/store');
+const { listForms, findForm, createForm, store } = require('../db/store');
 
 const router = express.Router();
+
+function isSeedForm(form) {
+  return form.id === store.secretFormId || form.id === store.publicFormId;
+}
 
 router.get('/', (req, res) => {
   const forms = listForms().map((f) => {
@@ -44,6 +48,7 @@ router.get('/:id', (req, res) => {
     publicId: form.publicId,
     title: form.title,
     questions: form.questions,
+    ...(!isSeedForm(form) ? { stamp: STAMPS[MODE].create } : {}),
   });
 });
 
@@ -60,7 +65,6 @@ router.post('/', (req, res) => {
     publicId: form.publicId,
     title: form.title,
     questions: form.questions,
-    stamp: STAMPS[MODE].create,
   });
 });
 
